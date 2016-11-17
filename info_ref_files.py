@@ -165,8 +165,21 @@ def read_and_check_valid_params(instrument, file_header):
                 #In the cases of SUBSTRT or SUBSIZE
                 if type(file_header[row[0]]) is int:
                     row[1:] = [int(x) for x in row[1:]]
+                #If OR is present in value
+                if type(file_header[row[0]]) is not int and "|" in file_header[row[0]]:
+                    values = file_header[row[0]].split("|")
+                    if values[0] in row[1:]:
+                        pass
+                    else:
+                        non_valid_params.append((values[0], row[0]))
+
+                    if values[1] in row[1:]:
+                        pass
+                    else:
+                        non_valid_params.append((values[1], row[0]))
                 #Valid value
-                if file_header[row[0]] in row[1:]:
+                if (type(file_header[row[0]]) is int or "|" not in file_header[row[0]]) \
+                    and file_header[row[0]] in row[1:]:
                     pass
                 #Check USEAFTER
                 elif row[0] == 'USEAFTER':
@@ -240,8 +253,20 @@ def read_and_check_valid_params_json(instrument, file_header):
         for row in keyreader:
             if row[0].lower() in file_header or (row[0] == "HISTORY" and row[0] in file_header):
             #for header in file_header:
-                #Valid value
-                if file_header[row[0]] in row[1:]:
+            #If OR is present in value
+                if not type(file_header[row[0]]) is int and "|" in file_header[row[0]]:
+                    values = file_header[row[0]].split("|")
+                    if values[0] in row[1:]:
+                        pass
+                    else:
+                        non_valid_params.append((values[0], row[0]))
+
+                    if values[1] in row[1:]:
+                        pass
+                    else:
+                        non_valid_params.append((values[1], row[0]))
+                    #Valid value
+                elif file_header[row[0]] in row[1:]:
                     pass
                 #Check USEAFTER
                 elif row[0] == 'USEAFTER':
@@ -299,8 +324,20 @@ def read_and_check_valid_params_asdf(instrument, file_header):
         for row in keyreader:
             if row[0].lower() in file_header or (row[0] == "HISTORY" and row[0] in file_header):
             #for header in file_header:
+                #If OR is present in value
+                if not type(file_header[row[0]]) is int and "|" in file_header[row[0]]:
+                    values = file_header[row[0]].split("|")
+                    if values[0] in row[1:]:
+                        pass
+                    else:
+                        non_valid_params.append((values[0], row[0]))
+
+                    if values[1] in row[1:]:
+                        pass
+                    else:
+                        non_valid_params.append((values[1], row[0]))
                 #Valid value
-                if file_header[row[0]] in row[1:]:
+                elif file_header[row[0]] in row[1:]:
                     pass
                 #Check USEAFTER
                 elif row[0] == 'USEAFTER':
