@@ -89,12 +89,48 @@ def get_file_headers(hdulist):
         get_instrume = hdulist[0].header['INSTRUME']
         get_telescop = hdulist[0].header['TELESCOP']
         get_reftype = hdulist[0].header['REFTYPE']
+        if get_reftype == "FLAT":
+            get_reftype = "_FLAT"
         return (get_instrume, get_telescop, get_reftype)
     else:
         get_instrume = hdulist[0].header['INSTRUME']
         get_telescop = False
         get_reftype = hdulist[0].header['REFTYPE']
+        if get_reftype == "FLAT":
+            get_reftype = "_FLAT"
         return (get_instrume, get_telescop, get_reftype)
+
+def get_required_ors(get_instrume, get_reftype, filename, file_hdu, type):
+    elements_without_or = []
+    check_if_filename_present = False
+
+    file_loc = "required_or.csv"
+    with open(file_loc, 'rb') as csvfile:
+        keyreader = csv.reader(csvfile, delimiter=' ', quotechar='|')
+        for row in keyreader:
+            # Checks to see if file type is in csv
+            if re.search(get_instrume.lower(),row[0]) != None and \
+                re.search(get_reftype.lower(),row[0]) != None:
+                check_if_filename_present = True
+                for elem in row[1:]:
+                    ##############################################
+                    if "=" in elem:
+                        exp_in_elem = elem.split("=")
+                        if exp_in_elem[0] in file_hdu and exp_in_elem[2] in file_hdu:
+                            if len(exp_in_elem) == 5 and exp[4] == "!" and file_hdu[exp_in_elem[0]] != exp_in_elem[1]:
+                                if (not set(file_hdu[exp_in_elem[2]]).issubset(set(exp_in_elem[3]))) and (exp_in_elem[2] not in elements_without_or):
+                                    elements_without_or.append(exp_in_elem[2])
+                            elif file_hdu[exp_in_elem[0]] == exp_in_elem[1]:
+                                if (not set(file_hdu[exp_in_elem[2]]).issubset(set(exp_in_elem[3]))) and (exp_in_elem[2] not in elements_without_or):
+                                    elements_without_or.append(exp_in_elem[2])
+                            elif (("|" not in file_hdu[exp_in_elem[0]] or "/" not in file_hdu[exp_in_elem[0]])) and (exp_in_elem[0] not in elements_without_or):
+                                elements_without_or.append(exp_in_elem[0])
+                    elif (elem in file_hdu and ("|" not in file_hdu[elem] or "/" not in file_hdu[elem])) and (elem not in elements_without_or):
+                        elements_without_or.append(elem)
+                    elif elem not in file_hdu:
+                        print ("WARNING: {} not in {}'s header".format(elem,filename))
+    if check_if_filename_present and elements_without_or:
+        print ("WARNING: Headers {} in {} needs to have an '|', 'N/A', or valid value".format(elements_without_or,filename))
 
 def check_required_keys(instrument, filename, hdulist):
     """
@@ -115,7 +151,7 @@ def check_required_keys(instrument, filename, hdulist):
             check_if_tests_in_filename = False
             #INSTRUME and REFTYPE have valid values
             if re.search(get_instrume.lower(),row[0]) != None and \
-                    re.search(get_reftype.lower(),row[0]) != None:
+                re.search(get_reftype.lower(),row[0]) != None:
 
                 check_if_filename_present = True
                 #TELESCOP exists and has a matching value
@@ -178,7 +214,7 @@ def read_and_check_valid_params(instrument, file_header):
                     else:
                         non_valid_params.append((values[1], row[0]))
                 #Valid value
-                if (type(file_header[row[0]]) is int or "|" not in file_header[row[0]]) \
+                elif (type(file_header[row[0]]) is int or "|" not in file_header[row[0]]) \
                     and file_header[row[0]] in row[1:]:
                     pass
                 #Check USEAFTER
@@ -368,6 +404,7 @@ def read_and_check_valid_params_asdf(instrument, file_header):
             print ("All parameters are valid")
         else:
             print ("Non-valid paramters (Format (Non-valid value, Header located in)): {}".format(non_valid_params))
+
 ################################################################################
 # Main
 ################################################################################
@@ -378,7 +415,7 @@ args = parser.parse_args()
 
 directory = args.chosen_directory
 #directory = "/grp/crds/jwst/references/jwst/"
-#irectory = "/user/rmiller/CDBS/testfile"
+#directory = "/user/rmiller/CDBS/testfile"
 #directory = "/Users/javerbukh/Documents/Info_reference_files"
 for filename in os.listdir(directory):
     new_path = str(os.path.join(directory, filename))
@@ -391,6 +428,8 @@ for filename in os.listdir(directory):
             break
         if check_usability(hdulist):
             instrument_team = hdulist[0].header['INSTRUME']
+            ref_type = hdulist[0].header['REFTYPE']
+            get_required_ors(instrument_team, ref_type, filename, hdulist[0].header, "FITS")
             check_required_keys(instrument_team, filename, hdulist)
             read_and_check_valid_params(instrument_team, hdulist[0].header)
         print ("------------------------------------------------------------\n")
